@@ -211,9 +211,29 @@ namespace DependencyInjectionContainerLibrary.Tests
 
             //Act
             IGenericService<int> testServiceOne = dependencyProvider.Resolve<IGenericService<int>>();
+            IGenericService<int> testServiceTwo = dependencyProvider.Resolve<IGenericService<int>>();
 
             //Assert
             Assert.NotNull(testServiceOne);
+            Assert.AreNotEqual(testServiceOne, testServiceTwo);
+        }
+        
+        [Test]
+        public void ResolveOpenGenericSingletonService()
+        {
+            //Arrange
+            var configuration = new DependencyConfiguration();
+            configuration.AddSingleton(typeof(IGenericService<>), typeof(GenericService<>));
+            var dependencyProvider = new DependencyProvider(configuration);
+
+            //Act
+            IGenericService<int> testServiceOne = dependencyProvider.Resolve<IGenericService<int>>();
+            IGenericService<int> testServiceTwo = dependencyProvider.Resolve<IGenericService<int>>();
+
+            //Assert
+            Assert.NotNull(testServiceOne);
+            Assert.NotNull(testServiceTwo);
+            Assert.AreEqual(testServiceOne, testServiceTwo);
         }
     }
 }
