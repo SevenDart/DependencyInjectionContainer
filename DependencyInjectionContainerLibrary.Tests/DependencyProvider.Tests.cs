@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
-using DependencyInjectionContainerLibrary.Interfaces;
 using NUnit.Framework;
 
 namespace DependencyInjectionContainerLibrary.Tests
@@ -194,6 +192,21 @@ namespace DependencyInjectionContainerLibrary.Tests
             //Arrange
             var configuration = new DependencyConfiguration();
             configuration.AddTransient<IGenericService<int>, GenericService<int>>();
+            var dependencyProvider = new DependencyProvider(configuration);
+
+            //Act
+            IGenericService<int> testServiceOne = dependencyProvider.Resolve<IGenericService<int>>();
+
+            //Assert
+            Assert.NotNull(testServiceOne);
+        }
+        
+        [Test]
+        public void ResolveOpenGenericService()
+        {
+            //Arrange
+            var configuration = new DependencyConfiguration();
+            configuration.AddTransient(typeof(IGenericService<>), typeof(GenericService<>));
             var dependencyProvider = new DependencyProvider(configuration);
 
             //Act

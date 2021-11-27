@@ -59,6 +59,29 @@ namespace DependencyInjectionContainerLibrary
                     return GetAllImplementations(targetType);
                 }
             }
+            
+            if (targetType.IsGenericType)
+            {
+                var genericType = targetType.GetGenericTypeDefinition();
+                var genericArgs = targetType.GenericTypeArguments; 
+                
+                if (_configuration.SingletonTypes.ContainsKey(genericType))
+                {
+                    if (_singletons[targetType].Count == 0)
+                    {
+                        stack.Push(_configuration.SingletonTypes[genericType].First().MakeGenericType(genericArgs));
+                        _singletons[targetType].Add(ConstructType(stack));
+                    }
+                    _mutex.ReleaseMutex();
+                    return _singletons[targetType].First();
+                }
+                
+                if (_configuration.TransientTypes.ContainsKey(genericType))
+                {
+                    stack.Push(_configuration.TransientTypes[genericType].First().MakeGenericType(genericArgs));
+                    return ConstructType(stack);
+                }
+            }
 
             return null;
         }
