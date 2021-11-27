@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using System.Threading;
 using DependencyInjectionContainerLibrary.Interfaces;
 
 namespace DependencyInjectionContainerLibrary
@@ -10,36 +10,39 @@ namespace DependencyInjectionContainerLibrary
     {
         private readonly IDependencyConfiguration _configuration;
 
-        private Dictionary<Type, List<object>> _singletons = new();
+        private readonly Dictionary<Type, List<object>> _singletons = new();
 
         public DependencyProvider(IDependencyConfiguration configuration)
         {
             _configuration = configuration;
             foreach (var singletonType in configuration.SingletonTypes)
             {
-                var implementations = new List<object>();
-                foreach (var implementation in singletonType.Value)
-                {
-                    var stack = new Stack<Type>();
-                    stack.Push(implementation);
-                    implementations.Add(Resolve(stack));
-                }
-                _singletons.Add(singletonType.Key, implementations);
+                _singletons.Add(singletonType.Key, new List<object>());
             }
         }
+
+        private readonly Mutex _mutex = new Mutex();
         
         public TDependency Resolve<TDependency>() where TDependency : class
         {
             var targetType = typeof(TDependency);
             if (_configuration.SingletonTypes.ContainsKey(targetType))
             {
+                _mutex.WaitOne();
+                if (_singletons[targetType].Count == 0)
+                {
+                    var stack = new Stack<Type>();
+                    stack.Push(_configuration.SingletonTypes[targetType].First());
+                    _singletons[targetType].Add(Resolve(stack));
+                }
+                _mutex.ReleaseMutex();
                 return (TDependency) _singletons[targetType].First();
             }
 
             if (_configuration.TransientTypes.ContainsKey(targetType))
             {
                 var stack = new Stack<Type>();
-                stack.Push(targetType);
+                stack.Push(_configuration.TransientTypes[targetType].First());
                 return (TDependency) Resolve(stack);
             }
 
@@ -63,11 +66,23 @@ namespace DependencyInjectionContainerLibrary
             
             if (_configuration.SingletonTypes.ContainsKey(targetType))
             {
+                _mutex.WaitOne();
+                foreach (var implementationType in _configuration.SingletonTypes[targetType])
+                {
+                    if (_singletons[targetType].FirstOrDefault(s => s.GetType() == implementationType) == null)
+                    {
+                        var stack = new Stack<Type>();
+                        stack.Push(implementationType);
+                        _singletons[targetType].Add(Resolve(stack));
+                    }
+                }
+                
                 foreach (var singleton in _singletons[targetType])
                 {
                     var obj = new[] {singleton};
                     listType.GetMethod("Add")?.Invoke(list, obj);
                 }
+                _mutex.ReleaseMutex();
             }
 
             if (_configuration.TransientTypes.ContainsKey(targetType))
@@ -86,16 +101,16 @@ namespace DependencyInjectionContainerLibrary
 
         private object Resolve(Stack<Type> dependencyStack)
         {
-            var targetType = dependencyStack.Pop();
+            var targetType = dependencyStack.Peek();
             
-            foreach (var target in dependencyStack)
+            foreach (var target in dependencyStack.Skip(1))
             {
                 if (target == targetType)
                 {
                     return null;
                 }
             }
-            
+
             var constructors = targetType.GetConstructors().OrderByDescending(c =>
             {
                 int lostArgsCount = 0;
