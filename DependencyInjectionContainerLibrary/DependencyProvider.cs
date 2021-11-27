@@ -45,8 +45,9 @@ namespace DependencyInjectionContainerLibrary
                 stack.Push(_configuration.TransientTypes[targetType].First());
                 return (TDependency) Resolve(stack);
             }
-
-            if (targetType == typeof(IEnumerable<>))
+            
+            if (targetType.GenericTypeArguments.Length != 0 
+                && targetType == typeof(IEnumerable<>).MakeGenericType(targetType.GenericTypeArguments.First()))
             {
                 targetType = targetType.GenericTypeArguments.First();
                 if (_configuration.SingletonTypes.ContainsKey(targetType)
@@ -116,7 +117,8 @@ namespace DependencyInjectionContainerLibrary
                 int lostArgsCount = 0;
                 foreach (var argument in c.GetParameters())
                 {
-                    if (argument.ParameterType == typeof(IEnumerable<>))
+                    if (targetType.GenericTypeArguments.Length != 0 
+                        && targetType == typeof(IEnumerable<>).MakeGenericType(targetType.GenericTypeArguments.First()))
                     {
                         var genericArg = argument.ParameterType.GenericTypeArguments.First();
                         if (!_configuration.SingletonTypes.ContainsKey(genericArg) 

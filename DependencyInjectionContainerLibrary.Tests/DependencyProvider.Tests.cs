@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using DependencyInjectionContainerLibrary.Interfaces;
 using NUnit.Framework;
 
@@ -23,6 +24,23 @@ namespace DependencyInjectionContainerLibrary.Tests
 
             //Assert
             Assert.NotNull(testService);
+        }
+        
+        [Test]
+        public void ResolveAServiceAllImplementations()
+        {
+            //Arrange
+            var configuration = new DependencyConfiguration();
+            configuration.AddTransient<IAService, AService>();
+            configuration.AddTransient<IAService, AServiceDuplicate>();
+            var dependencyProvider = new DependencyProvider(configuration);
+
+            //Act
+            var testService = dependencyProvider.Resolve<IEnumerable<IAService>>();
+
+            //Assert
+            Assert.NotNull(testService);
+            Assert.AreEqual(2, ((List<IAService>) testService).Count);
         }
         
         [Test]
