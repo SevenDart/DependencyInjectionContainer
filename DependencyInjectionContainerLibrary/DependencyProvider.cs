@@ -26,24 +26,27 @@ namespace DependencyInjectionContainerLibrary
         public TDependency Resolve<TDependency>() where TDependency : class
         {
             var targetType = typeof(TDependency);
+            return (TDependency) Resolve(targetType, new Stack<Type>());
+        }
+
+        private object Resolve(Type targetType, Stack<Type> stack)
+        {
             if (_configuration.SingletonTypes.ContainsKey(targetType))
             {
                 _mutex.WaitOne();
                 if (_singletons[targetType].Count == 0)
                 {
-                    var stack = new Stack<Type>();
                     stack.Push(_configuration.SingletonTypes[targetType].First());
-                    _singletons[targetType].Add(Resolve(stack));
+                    _singletons[targetType].Add(ConstructType(stack));
                 }
                 _mutex.ReleaseMutex();
-                return (TDependency) _singletons[targetType].First();
+                return _singletons[targetType].First();
             }
 
             if (_configuration.TransientTypes.ContainsKey(targetType))
             {
-                var stack = new Stack<Type>();
                 stack.Push(_configuration.TransientTypes[targetType].First());
-                return (TDependency) Resolve(stack);
+                return ConstructType(stack);
             }
             
             if (targetType.GenericTypeArguments.Length != 0 
@@ -53,7 +56,7 @@ namespace DependencyInjectionContainerLibrary
                 if (_configuration.SingletonTypes.ContainsKey(targetType)
                     || _configuration.TransientTypes.ContainsKey(targetType))
                 {
-                    return (TDependency) GetAllImplementations(targetType);
+                    return GetAllImplementations(targetType);
                 }
             }
 
@@ -74,7 +77,7 @@ namespace DependencyInjectionContainerLibrary
                     {
                         var stack = new Stack<Type>();
                         stack.Push(implementationType);
-                        _singletons[targetType].Add(Resolve(stack));
+                        _singletons[targetType].Add(ConstructType(stack));
                     }
                 }
                 
@@ -92,7 +95,7 @@ namespace DependencyInjectionContainerLibrary
                 {
                     var stack = new Stack<Type>();
                     stack.Push(type);
-                    var obj = new[] {Resolve(stack)};
+                    var obj = new[] {ConstructType(stack)};
                     listType.GetMethod("Add")?.Invoke(list, obj);
                 }
             }
@@ -100,7 +103,7 @@ namespace DependencyInjectionContainerLibrary
             return list;
         } 
 
-        private object Resolve(Stack<Type> dependencyStack)
+        private object ConstructType(Stack<Type> dependencyStack)
         {
             var targetType = dependencyStack.Peek();
             
@@ -150,12 +153,7 @@ namespace DependencyInjectionContainerLibrary
                         }
                         else
                         {
-                            arguments.Add(
-                                typeof(IDependencyProvider)
-                                    .GetMethod("Resolve")?
-                                    .MakeGenericMethod(argument.ParameterType)
-                                    .Invoke(this, Array.Empty<object>())
-                            );
+                            arguments.Add(Resolve(argument.ParameterType, dependencyStack));
                         }
                     }
                     result = constructor.Invoke(arguments.ToArray());
