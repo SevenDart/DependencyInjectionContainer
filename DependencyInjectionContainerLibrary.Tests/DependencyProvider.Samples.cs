@@ -2,6 +2,11 @@
 
 namespace DependencyInjectionContainerLibrary.Tests
 {
+    enum AServices
+    {
+        First,
+        Second
+    }
     interface IAService
     {
         

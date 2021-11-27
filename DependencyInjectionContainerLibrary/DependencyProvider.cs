@@ -11,6 +11,7 @@ namespace DependencyInjectionContainerLibrary
         private readonly IDependencyConfiguration _configuration;
 
         private readonly Dictionary<Type, List<object>> _singletons = new();
+        private readonly Dictionary<Type, Dictionary<Enum, object>> _namedSingletons = new();
 
         public DependencyProvider(IDependencyConfiguration configuration)
         {
@@ -21,30 +22,71 @@ namespace DependencyInjectionContainerLibrary
             }
         }
 
-        private readonly Mutex _mutex = new Mutex();
+        private readonly Mutex _mutex = new();
         
         public TDependency Resolve<TDependency>() where TDependency : class
         {
             var targetType = typeof(TDependency);
             return (TDependency) Resolve(targetType, new Stack<Type>());
         }
+        
+        public TDependency Resolve<TDependency>(Enum implementationName) where TDependency : class
+        {
+            var targetType = typeof(TDependency);
+            return (TDependency) Resolve(targetType, new Stack<Type>(), implementationName);
+        }
 
-        private object Resolve(Type targetType, Stack<Type> stack)
+        private object Resolve(Type targetType, Stack<Type> stack, Enum implementationName = null)
         {
             if (_configuration.SingletonTypes.ContainsKey(targetType))
             {
+                if (implementationName != null 
+                    && _configuration.SingletonNamedTypes.ContainsKey(targetType) 
+                    && _configuration.SingletonNamedTypes[targetType].ContainsKey(implementationName))
+                {
+                    _mutex.WaitOne();
+
+                    if (!_namedSingletons[targetType].ContainsKey(implementationName))
+                    {
+                        stack.Push(_configuration.SingletonNamedTypes[targetType][implementationName]);
+                        _namedSingletons[targetType].Add(implementationName, ConstructType(stack));
+                    }
+                    
+                    _mutex.ReleaseMutex();
+                    return _namedSingletons[targetType][implementationName];
+                }
+
+                if (implementationName != null)
+                {
+                    return null;
+                }
+
                 _mutex.WaitOne();
                 if (_singletons[targetType].Count == 0)
                 {
                     stack.Push(_configuration.SingletonTypes[targetType].First());
                     _singletons[targetType].Add(ConstructType(stack));
                 }
+
                 _mutex.ReleaseMutex();
                 return _singletons[targetType].First();
             }
 
             if (_configuration.TransientTypes.ContainsKey(targetType))
             {
+                if (implementationName != null
+                    && _configuration.TransientNamedTypes.ContainsKey(targetType)
+                    && _configuration.TransientNamedTypes[targetType].ContainsKey(implementationName))
+                {
+                    stack.Push(_configuration.TransientNamedTypes[targetType][implementationName]);
+                    return ConstructType(stack);
+                }
+                
+                if (implementationName != null)
+                {
+                    return null;
+                }
+                
                 stack.Push(_configuration.TransientTypes[targetType].First());
                 return ConstructType(stack);
             }
@@ -67,6 +109,28 @@ namespace DependencyInjectionContainerLibrary
                 
                 if (_configuration.SingletonTypes.ContainsKey(genericType))
                 {
+                    if (implementationName != null 
+                        && _configuration.TransientNamedTypes.ContainsKey(targetType) 
+                        && _configuration.TransientNamedTypes[targetType].ContainsKey(implementationName))
+                    {
+                        _mutex.WaitOne();
+
+                        if (!_namedSingletons[targetType].ContainsKey(implementationName))
+                        {
+                            stack.Push(_configuration.SingletonNamedTypes[targetType][implementationName].MakeGenericType(genericArgs));
+                            _namedSingletons[targetType].Add(implementationName, ConstructType(stack));
+                        }
+                    
+                        _mutex.ReleaseMutex();
+                        return _namedSingletons[targetType][implementationName];
+                    }
+                    
+                    if (implementationName != null)
+                    {
+                        return null;
+                    }
+
+                    _mutex.WaitOne();
                     if (_singletons[targetType].Count == 0)
                     {
                         stack.Push(_configuration.SingletonTypes[genericType].First().MakeGenericType(genericArgs));
@@ -78,6 +142,19 @@ namespace DependencyInjectionContainerLibrary
                 
                 if (_configuration.TransientTypes.ContainsKey(genericType))
                 {
+                    if (implementationName != null
+                        && _configuration.SingletonNamedTypes.ContainsKey(targetType)
+                        && _configuration.SingletonNamedTypes[targetType].ContainsKey(implementationName))
+                    {
+                        stack.Push(_configuration.TransientNamedTypes[targetType][implementationName].MakeGenericType(genericArgs));
+                        return ConstructType(stack);
+                    }
+                
+                    if (implementationName != null)
+                    {
+                        return null;
+                    }
+                    
                     stack.Push(_configuration.TransientTypes[genericType].First().MakeGenericType(genericArgs));
                     return ConstructType(stack);
                 }
