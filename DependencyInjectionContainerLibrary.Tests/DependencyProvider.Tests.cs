@@ -235,5 +235,45 @@ namespace DependencyInjectionContainerLibrary.Tests
             Assert.NotNull(testServiceTwo);
             Assert.AreEqual(testServiceOne, testServiceTwo);
         }
+        
+        [Test]
+        public void ResolveNamedService()
+        {
+            //Arrange
+            var configuration = new DependencyConfiguration();
+            configuration.AddTransient<IAService, AService>(AServices.First);
+            configuration.AddTransient<IAService, AServiceDuplicate>(AServices.Second);
+            var dependencyProvider = new DependencyProvider(configuration);
+
+            //Act
+            IAService testServiceOne = dependencyProvider.Resolve<IAService>(AServices.First);
+            IAService testServiceTwo = dependencyProvider.Resolve<IAService>(AServices.Second);
+
+            //Assert
+            Assert.NotNull(testServiceOne);
+            Assert.NotNull(testServiceTwo);
+            Assert.AreEqual(typeof(AService), testServiceOne.GetType());
+            Assert.AreEqual(typeof(AServiceDuplicate), testServiceTwo.GetType());
+        }
+        
+        
+        [Test]
+        public void ResolveNamedServiceInConstructor()
+        {
+            //Arrange
+            var configuration = new DependencyConfiguration();
+            configuration.AddTransient<IAService, AService>(AServices.First);
+            configuration.AddTransient<IAService, AServiceDuplicate>(AServices.Second);
+            configuration.AddTransient<ICustomConstructorDependency, CustomConstructorDependency>();
+            var dependencyProvider = new DependencyProvider(configuration);
+
+            //Act
+            ICustomConstructorDependency testServiceOne = dependencyProvider.Resolve<ICustomConstructorDependency>();
+
+            //Assert
+            Assert.NotNull(testServiceOne);
+            Assert.AreEqual(typeof(AService), testServiceOne.CustomAService.GetType());
+        }
+        
     }
 }

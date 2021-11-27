@@ -1,7 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace DependencyInjectionContainerLibrary.Tests
 {
+    enum AServices
+    {
+        First,
+        Second
+    }
     interface IAService
     {
         
@@ -100,6 +106,20 @@ namespace DependencyInjectionContainerLibrary.Tests
     {
         public GenericService()
         {
+        }
+    }
+
+    interface ICustomConstructorDependency
+    {
+        public IAService CustomAService { get; }
+    }
+    
+    class CustomConstructorDependency : ICustomConstructorDependency
+    {
+        public IAService CustomAService { get; }
+        public CustomConstructorDependency( [DependencyName(AServices.First)] IAService customAService)
+        {
+            CustomAService = customAService;
         }
     }
 }
