@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 
@@ -255,6 +254,25 @@ namespace DependencyInjectionContainerLibrary.Tests
             Assert.NotNull(testServiceTwo);
             Assert.AreEqual(typeof(AService), testServiceOne.GetType());
             Assert.AreEqual(typeof(AServiceDuplicate), testServiceTwo.GetType());
+        }
+        
+        
+        [Test]
+        public void ResolveNamedServiceInConstructor()
+        {
+            //Arrange
+            var configuration = new DependencyConfiguration();
+            configuration.AddTransient<IAService, AService>(AServices.First);
+            configuration.AddTransient<IAService, AServiceDuplicate>(AServices.Second);
+            configuration.AddTransient<ICustomConstructorDependency, CustomConstructorDependency>();
+            var dependencyProvider = new DependencyProvider(configuration);
+
+            //Act
+            ICustomConstructorDependency testServiceOne = dependencyProvider.Resolve<ICustomConstructorDependency>();
+
+            //Assert
+            Assert.NotNull(testServiceOne);
+            Assert.AreEqual(typeof(AService), testServiceOne.CustomAService.GetType());
         }
         
     }

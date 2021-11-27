@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using DependencyInjectionContainerLibrary.Interfaces;
 
@@ -253,7 +254,15 @@ namespace DependencyInjectionContainerLibrary
                         }
                         else
                         {
-                            arguments.Add(Resolve(argument.ParameterType, dependencyStack));
+                            Enum implementationName = null;
+                            var dependencyNameAttribute = argument.GetCustomAttributes()
+                                .FirstOrDefault(atr => atr.GetType() == typeof(DependencyNameAttribute));
+                            if (dependencyNameAttribute != null)
+                            {
+                                implementationName = ((DependencyNameAttribute) dependencyNameAttribute)
+                                    .ImplementationName;
+                            }
+                            arguments.Add(Resolve(argument.ParameterType, dependencyStack, implementationName));
                         }
                     }
                     result = constructor.Invoke(arguments.ToArray());
