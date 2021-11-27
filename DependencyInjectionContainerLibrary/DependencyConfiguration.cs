@@ -9,7 +9,7 @@ namespace DependencyInjectionContainerLibrary
         public Dictionary<Type, List<Type>> TransientTypes { get; } = new();
         public Dictionary<Type, List<Type>> SingletonTypes { get; } = new();
 
-        public void AddSingleton<TDependency, TImplementation>()
+        public void AddSingleton<TDependency, TImplementation>() where TImplementation: TDependency
         {
             var dependencyType = typeof(TDependency);
             var implementationType = typeof(TImplementation);
@@ -22,7 +22,7 @@ namespace DependencyInjectionContainerLibrary
             SingletonTypes[dependencyType].Add(implementationType);
         }
 
-        public void AddTransient<TDependency, TImplementation>()
+        public void AddTransient<TDependency, TImplementation>() where TImplementation: TDependency
         {
             var dependencyType = typeof(TDependency);
             var implementationType = typeof(TImplementation);

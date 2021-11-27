@@ -8,7 +8,7 @@ namespace DependencyInjectionContainerLibrary.Interfaces
         Dictionary<Type, List<Type>> TransientTypes { get; }
         Dictionary<Type, List<Type>> SingletonTypes { get; }
         
-        void AddSingleton<TDependency, TImplementation>();
-        void AddTransient<TDependency, TImplementation>();
+        void AddSingleton<TDependency, TImplementation>() where TImplementation: TDependency;
+        void AddTransient<TDependency, TImplementation>() where TImplementation: TDependency;
     }
 }
