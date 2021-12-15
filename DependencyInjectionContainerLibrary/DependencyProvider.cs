@@ -132,13 +132,13 @@ namespace DependencyInjectionContainerLibrary
                     }
 
                     _mutex.WaitOne();
-                    if (_singletons[targetType].Count == 0)
+                    if (_singletons[genericType].Count == 0)
                     {
                         stack.Push(_configuration.SingletonTypes[genericType].First().MakeGenericType(genericArgs));
-                        _singletons[targetType].Add(ConstructType(stack));
+                        _singletons[genericType].Add(ConstructType(stack));
                     }
                     _mutex.ReleaseMutex();
-                    return _singletons[targetType].First();
+                    return _singletons[genericType].First();
                 }
                 
                 if (_configuration.TransientTypes.ContainsKey(genericType))
